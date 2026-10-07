@@ -37,6 +37,7 @@ class QueuesMixin(JiraClient):
         if not project_key or not project_key.strip():
             raise ValueError("Project key is required")
 
+        self._enforce_projects_filter_for_project(project_key)
         self._ensure_server_mode()
 
         normalized_project_key = project_key.strip().upper()
@@ -108,6 +109,7 @@ class QueuesMixin(JiraClient):
         if limit < 1:
             raise ValueError("limit must be >= 1")
 
+        self._enforce_projects_filter_for_service_desk(service_desk_id)
         self._ensure_server_mode()
 
         try:
@@ -163,6 +165,7 @@ class QueuesMixin(JiraClient):
         if limit < 1:
             raise ValueError("limit must be >= 1")
 
+        self._enforce_projects_filter_for_service_desk(service_desk_id)
         self._ensure_server_mode()
 
         queue_model: JiraQueue | None = None

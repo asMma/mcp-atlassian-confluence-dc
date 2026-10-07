@@ -43,7 +43,9 @@ class EpicsMixin(
                 return
 
             # Find an Epic in the system
-            epics_jql = "issuetype = Epic ORDER BY created DESC"
+            epics_jql = self._apply_projects_filter(
+                "issuetype = Epic ORDER BY created DESC"
+            )
             results = self.jira.jql(epics_jql, fields="*all", limit=1)
             if not isinstance(results, dict):
                 msg = f"Unexpected return value type from `jira.jql`: {type(results)}"
@@ -305,6 +307,8 @@ class EpicsMixin(
             ValueError: If the epic_key is not an actual epic
             Exception: If there is an error linking the issue to the epic
         """
+        self._enforce_projects_filter(issue_key)
+        self._enforce_projects_filter(epic_key)
         try:
             # Verify that both issue and epic exist
             issue = self.jira.get_issue(issue_key)
@@ -446,6 +450,7 @@ class EpicsMixin(
             ValueError: If the issue is not an Epic
             Exception: If there is an error getting epic issues
         """
+        self._enforce_projects_filter(epic_key)
         try:
             # First, check if the issue is an Epic
             epic = self.jira.get_issue(epic_key)
@@ -779,7 +784,7 @@ class EpicsMixin(
         """
         try:
             # Search for issues with type=Epic
-            jql = "issuetype = Epic ORDER BY updated DESC"
+            jql = self._apply_projects_filter("issuetype = Epic ORDER BY updated DESC")
             response = self.jira.jql(jql, limit=1)
             if not isinstance(response, dict):
                 msg = f"Unexpected return value type from `jira.jql`: {type(response)}"
@@ -811,7 +816,9 @@ class EpicsMixin(
                 f"issueFunction in issuesScopedToEpic('{epic_key}')",
             ]:
                 try:
-                    response = self.jira.jql(query, limit=5)
+                    response = self.jira.jql(
+                        self._apply_projects_filter(query), limit=5
+                    )
                     if not isinstance(response, dict):
                         msg = f"Unexpected return value type from `jira.jql`: {type(response)}"
                         logger.error(msg)
@@ -864,6 +871,7 @@ class EpicsMixin(
         Raises:
             Exception: If there is an error updating the Epic fields
         """
+        self._enforce_projects_filter(issue_key)
         try:
             # Extract Epic fields from kwargs
             update_fields = {}

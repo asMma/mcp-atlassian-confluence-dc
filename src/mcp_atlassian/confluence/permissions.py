@@ -59,6 +59,7 @@ class PermissionsMixin(ConfluenceClient):
             HTTPError: If authentication fails (401/403 are propagated).
         """
         self._require_cloud_permissions_api()
+        self._enforce_spaces_filter_for_page(content_id)
         url = (
             f"{self._permissions_rest_base_url()}"
             f"/rest/api/content/{content_id}/permission/check"
@@ -111,6 +112,18 @@ class PermissionsMixin(ConfluenceClient):
             HTTPError: If authentication fails (401/403 are propagated).
         """
         self._require_cloud_permissions_api()
+        if self.config.spaces_filter:
+            space_url = f"{self._permissions_rest_base_url()}/api/v2/spaces/{space_id}"
+            try:
+                space_response = self.confluence._session.get(space_url)
+                space_response.raise_for_status()
+                space_key = space_response.json().get("key", "")
+            except Exception as e:
+                raise ValueError(
+                    f"Could not resolve space '{space_id}' to check it against "
+                    f"the configured space allowlist: {e}"
+                ) from e
+            self._enforce_spaces_filter(space_key)
         url = (
             f"{self._permissions_rest_base_url()}/api/v2/spaces/{space_id}/permissions"
         )

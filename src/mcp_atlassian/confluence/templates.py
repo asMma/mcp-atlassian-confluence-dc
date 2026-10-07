@@ -84,6 +84,8 @@ class TemplatesMixin(ConfluenceClient):
             HTTPError: If the API request fails.
             ValueError: If the API response has an unexpected shape.
         """
+        if space_key:
+            self._enforce_spaces_filter(space_key)
         params: dict[str, Any] = {"limit": limit}
         if space_key:
             params["spaceKey"] = space_key
@@ -117,9 +119,15 @@ class TemplatesMixin(ConfluenceClient):
             ValueError: If the API response has an unexpected shape.
         """
         encoded_template_id = quote(template_id, safe="")
-        return self._get_template_api_response(
+        template = self._get_template_api_response(
             f"/rest/api/template/{encoded_template_id}"
         )
+        space_key = template.get("space", {}).get("key") if isinstance(
+            template.get("space"), dict
+        ) else None
+        if space_key:
+            self._enforce_spaces_filter(space_key)
+        return template
 
     @handle_auth_errors("Confluence API")
     def create_page_from_template(
@@ -150,6 +158,7 @@ class TemplatesMixin(ConfluenceClient):
             ValueError: If the template has no storage-format body.
             Exception: If page creation fails.
         """
+        self._enforce_spaces_filter(space_key)
         template = self.get_page_template(template_id)
         body = template.get("body")
         storage = body.get("storage") if isinstance(body, dict) else None

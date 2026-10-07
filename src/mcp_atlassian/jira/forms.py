@@ -29,6 +29,7 @@ class FormsMixin(JiraClient):
             Exception: If there is an error getting forms
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Get the issue properties to find forms
             response = self.jira.get(
                 f"rest/api/3/issue/{issue_key}/properties/proforma.forms"
@@ -78,6 +79,7 @@ class FormsMixin(JiraClient):
             Exception: If there is an error getting form details
         """
         try:
+            self._enforce_projects_filter(issue_key)
             response = self.jira.get(
                 f"rest/api/3/issue/{issue_key}/properties/proforma.forms.{form_id}"
             )
@@ -125,6 +127,7 @@ class FormsMixin(JiraClient):
             Exception: If there is an error reopening the form
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Prepare the request body to set form status to open
             request_body = {"value": {"state": {"status": "o"}}}
 
@@ -163,6 +166,7 @@ class FormsMixin(JiraClient):
             Exception: If there is an error submitting the form
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Make the POST request to submit the form
             response = self.jira.post(
                 f"rest/api/3/issue/{issue_key}/properties/proforma.forms.{form_id}/submit"
@@ -204,6 +208,7 @@ class FormsMixin(JiraClient):
             Exception: If there is an error updating the field
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Prepare the field update
             update_data = {"fields": {field_id: field_value}}
 

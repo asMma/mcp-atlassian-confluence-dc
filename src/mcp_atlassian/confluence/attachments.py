@@ -149,6 +149,7 @@ class AttachmentsMixin(ConfluenceClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No file path provided"}
 
         try:
+            self._enforce_spaces_filter_for_page(content_id)
             # Confine the upload source to the workspace before it is read: reject
             # traversal/absolute paths that escape CWD (arbitrary file read /
             # exfiltration via a caller-supplied file_path).
@@ -296,6 +297,7 @@ class AttachmentsMixin(ConfluenceClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No file content provided"}
 
         try:
+            self._enforce_spaces_filter_for_page(content_id)
             logger.info(
                 f"Uploading attachment {filename} ({len(content)} bytes) to "
                 f"content {content_id} (minor_edit={minor_edit})"
@@ -546,6 +548,7 @@ class AttachmentsMixin(ConfluenceClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No content ID provided"}
 
         try:
+            self._enforce_spaces_filter_for_page(content_id)
             logger.info(f"Fetching attachments for content {content_id}")
 
             # Use v2 API for OAuth authentication, v1 API for token/basic auth
@@ -788,6 +791,19 @@ class AttachmentsMixin(ConfluenceClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No attachment ID provided"}
 
         try:
+            if self.config.spaces_filter:
+                # Attachments are a content type of their own (not a page), so
+                # resolve via the v1 content API directly rather than the v2
+                # pages endpoint used for page lookups.
+                attachment_content = self.confluence.get_page_by_id(
+                    page_id=attachment_id, expand="space"
+                )
+                space_key = (
+                    attachment_content.get("space", {}).get("key", "")
+                    if isinstance(attachment_content, dict)
+                    else ""
+                )
+                self._enforce_spaces_filter(space_key)
             logger.info(f"Deleting attachment {attachment_id}")
 
             # Use v2 API for OAuth authentication, v1 API for token/basic auth

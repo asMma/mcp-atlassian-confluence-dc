@@ -52,6 +52,7 @@ class DevelopmentMixin(JiraClient):
             ValueError: If the issue is not found or issue ID cannot be retrieved
             Exception: If there is an error retrieving development info
         """
+        self._enforce_projects_filter(issue_key)
         try:
             # First, get the issue to obtain its numeric ID
             issue = self.jira.get_issue(issue_key, fields="id")

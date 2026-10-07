@@ -25,6 +25,19 @@ class SpacesMixin(ConfluenceClient):
             Dictionary containing space information with results and metadata
         """
         spaces = self.confluence.get_all_spaces(start=start, limit=limit)
+        if self.config.spaces_filter and isinstance(spaces, dict):
+            allowed = {s.strip().upper() for s in self.config.spaces_filter.split(",")}
+            results = spaces.get("results", [])
+            if isinstance(results, list):
+                spaces = {
+                    **spaces,
+                    "results": [
+                        s
+                        for s in results
+                        if isinstance(s, dict)
+                        and str(s.get("key", "")).upper() in allowed
+                    ],
+                }
         # Cast the return value to the expected type
         return cast(dict[str, object], spaces)
 
@@ -79,6 +92,16 @@ class SpacesMixin(ConfluenceClient):
                     # Add some defaults if we couldn't extract all fields
                     space_name = space_name or f"Space {space_key}"
                     spaces[space_key] = {"key": space_key, "name": space_name}
+
+            if self.config.spaces_filter:
+                allowed = {
+                    s.strip().upper() for s in self.config.spaces_filter.split(",")
+                }
+                spaces = {
+                    key: value
+                    for key, value in spaces.items()
+                    if key.upper() in allowed
+                }
 
             return spaces
 

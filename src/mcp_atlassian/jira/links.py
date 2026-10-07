@@ -127,6 +127,9 @@ class LinksMixin(JiraClient):
         if not data.get("outwardIssue") or not data["outwardIssue"].get("key"):
             raise ValueError("Outward issue key is required")
 
+        self._enforce_projects_filter(data["inwardIssue"]["key"])
+        self._enforce_projects_filter(data["outwardIssue"]["key"])
+
         if data.get("comment"):
             self._enforce_internal_only_link_comment(
                 data["inwardIssue"]["key"], data["outwardIssue"]["key"]
@@ -198,6 +201,8 @@ class LinksMixin(JiraClient):
         if not link_data["object"].get("title"):
             raise ValueError("Title is required in link object")
 
+        self._enforce_projects_filter(issue_key)
+
         try:
             # Cloud uses v3 API, Server/DC uses v2 API
             if self.config.is_cloud:
@@ -237,6 +242,8 @@ class LinksMixin(JiraClient):
         Raises:
             MCPAtlassianAuthenticationError: If authentication fails
         """
+        self._enforce_projects_filter(issue_key)
+
         try:
             if self.config.is_cloud:
                 endpoint = f"rest/api/3/issue/{issue_key}/remotelink"

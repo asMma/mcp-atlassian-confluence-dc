@@ -226,6 +226,7 @@ class PagesMixin(ConfluenceClient):
                 raise Exception(error_msg)
 
             space_key = page.get("space", {}).get("key", "")
+            self._enforce_spaces_filter(space_key)
             try:
                 content = page["body"]["storage"]["value"]
             except (KeyError, TypeError) as e:
@@ -286,6 +287,7 @@ class PagesMixin(ConfluenceClient):
             MCPAtlassianAuthenticationError: If authentication
                 fails with the Confluence API (401/403)
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             ancestors = self.confluence.get_page_ancestors(page_id)
 
@@ -539,6 +541,7 @@ class PagesMixin(ConfluenceClient):
         Returns:
             ConfluencePage model containing the page content and metadata, or None if not found
         """
+        self._enforce_spaces_filter(space_key)
         try:
             # Directly try to find the page by title
             page = self.confluence.get_page_by_title(
@@ -622,6 +625,7 @@ class PagesMixin(ConfluenceClient):
         Returns:
             List of ConfluencePage models containing page content and metadata
         """
+        self._enforce_spaces_filter(space_key)
         pages = self.confluence.get_all_pages_from_space(
             space=space_key, start=start, limit=limit, expand="body.storage"
         )
@@ -704,6 +708,7 @@ class PagesMixin(ConfluenceClient):
         Raises:
             Exception: If there is an error creating the page
         """
+        self._enforce_spaces_filter(space_key)
         try:
             # Determine body and representation based on content type
             if is_markdown:
@@ -815,6 +820,7 @@ class PagesMixin(ConfluenceClient):
         Raises:
             Exception: If there is an error updating the page
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             # Determine body and representation based on content type
             if is_markdown:
@@ -1039,6 +1045,7 @@ class PagesMixin(ConfluenceClient):
         Returns:
             List of ConfluencePage models containing the child pages and folders
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             limit = clamp_limit(limit, context="confluence.get_page_children")
 
@@ -1179,6 +1186,7 @@ class PagesMixin(ConfluenceClient):
         Raises:
             Exception: If there is an error fetching pages
         """
+        self._enforce_spaces_filter(space_key)
         try:
             limit = clamp_limit(limit, context="confluence.get_space_page_tree")
 
@@ -1296,6 +1304,7 @@ class PagesMixin(ConfluenceClient):
         Raises:
             Exception: If there is an error deleting the page
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             logger.debug(f"Deleting page {page_id}")
 
@@ -1399,6 +1408,7 @@ class PagesMixin(ConfluenceClient):
                 content = ""
 
             space_key = page.get("space", {}).get("key", "")
+            self._enforce_spaces_filter(space_key)
             page_attachments = (
                 page.get("children", {}).get("attachment", {}).get("results", [])
             )
@@ -1458,6 +1468,12 @@ class PagesMixin(ConfluenceClient):
             raise ValueError(
                 "At least one of target_parent_id or target_space_key must be provided."
             )
+
+        self._enforce_spaces_filter_for_page(page_id)
+        if target_space_key:
+            self._enforce_spaces_filter(target_space_key)
+        elif target_parent_id:
+            self._enforce_spaces_filter_for_page(target_parent_id)
 
         try:
             # Use v2 adapter for OAuth authentication
@@ -1573,6 +1589,8 @@ class PagesMixin(ConfluenceClient):
             MCPAtlassianAuthenticationError: If authentication fails.
             Exception: If the copy operation fails.
         """
+        self._enforce_spaces_filter_for_page(source_page_id)
+        self._enforce_spaces_filter(destination_space_key)
         try:
             if self.config.is_cloud:
                 payload: dict[str, object] = {

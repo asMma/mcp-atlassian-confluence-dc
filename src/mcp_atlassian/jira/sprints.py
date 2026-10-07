@@ -143,6 +143,8 @@ class SprintsMixin(JiraClient):
         Raises:
             requests.HTTPError: If the API call fails.
         """
+        for issue_key in issue_keys:
+            self._enforce_projects_filter(issue_key)
         self.jira.post(
             f"rest/agile/1.0/sprint/{sprint_id}/issue",
             data={"issues": issue_keys},
@@ -161,6 +163,8 @@ class SprintsMixin(JiraClient):
         Raises:
             requests.HTTPError: If the API call fails.
         """
+        for issue_key in issue_keys:
+            self._enforce_projects_filter(issue_key)
         self.jira.post(
             "rest/agile/1.0/backlog/issue",
             data={"issues": issue_keys},

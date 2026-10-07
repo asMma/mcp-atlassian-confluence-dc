@@ -38,11 +38,19 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             )
             if not isinstance(projects, list):
                 return []
-            return [
+            result = [
                 JiraProject.from_api_response(p).to_simplified_dict()
                 for p in projects
                 if isinstance(p, dict)
             ]
+            if self.config.projects_filter:
+                allowed_keys = {
+                    k.strip().upper() for k in self.config.projects_filter.split(",")
+                }
+                result = [
+                    p for p in result if str(p.get("key", "")).upper() in allowed_keys
+                ]
+            return result
 
         except Exception as e:
             logger.error(f"Error getting all projects: {str(e)}")
@@ -123,6 +131,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             Project data or None if not found
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             project_data = self.jira.project(project_key)
             if not isinstance(project_data, dict):
                 msg = f"Unexpected return value type from `jira.project`: {type(project_data)}"
@@ -177,6 +186,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             List of component data dictionaries
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             components = self.jira.get_project_components(key=project_key)
             return components if isinstance(components, list) else []
 
@@ -197,6 +207,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             List of version data dictionaries
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             raw_versions = self.jira.get_project_versions(key=project_key)
             if not isinstance(raw_versions, list):
                 return []
@@ -220,6 +231,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             Dictionary of role names mapped to role details
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             roles = self.jira.get_project_roles(project_key=project_key)
             return roles if isinstance(roles, dict) else {}
 
@@ -241,6 +253,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             List of role members
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             members = self.jira.get_project_actors_for_role_project(
                 project_key=project_key, role_id=role_id
             )
@@ -267,6 +280,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             Permission scheme data if found, None otherwise
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             scheme = self.jira.get_project_permission_scheme(
                 project_id_or_key=project_key
             )
@@ -295,6 +309,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             Notification scheme data if found, None otherwise
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             scheme = self.jira.get_project_notification_scheme(
                 project_id_or_key=project_key
             )
@@ -321,6 +336,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             List of issue type data dictionaries
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             issue_types: list[dict[str, Any]] = []
             start_at = 0
             page_size = 50
@@ -391,6 +407,7 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             schema, etc.
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             fields: list[dict[str, Any]] = []
             start_at = 0
             page_size = 50
@@ -523,8 +540,9 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             Count of issues in the project
         """
         try:
+            self._enforce_projects_filter_for_project(project_key)
             # Use JQL to count issues in the project
-            jql = f'project = "{project_key}"'
+            jql = self._apply_projects_filter(f'project = "{project_key}"')
             result = self.jira.jql(jql=jql, fields="key", limit=1)
             if not isinstance(result, dict):
                 msg = f"Unexpected return value type from `jira.jql`: {type(result)}"

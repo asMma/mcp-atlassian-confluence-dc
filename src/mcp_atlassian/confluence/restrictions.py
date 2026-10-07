@@ -33,6 +33,7 @@ class RestrictionsMixin(ConfluenceClient):
             MCPAtlassianAuthenticationError: If authentication fails.
             Exception: If the API call fails.
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             data = self.confluence.get(
                 f"{self._v1_rest_base_url()}/rest/api/content/"
@@ -117,6 +118,7 @@ class RestrictionsMixin(ConfluenceClient):
             MCPAtlassianAuthenticationError: If authentication fails.
             Exception: If the API call fails.
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             read_users = read_users or []
             read_groups = read_groups or []

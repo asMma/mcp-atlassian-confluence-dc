@@ -89,6 +89,7 @@ class WorklogMixin(JiraClient):
             Exception: If there's an error adding the worklog
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Convert time_spent string to seconds
             time_spent_seconds = self._parse_time_spent(time_spent)
 
@@ -175,6 +176,7 @@ class WorklogMixin(JiraClient):
         Returns:
             Raw worklog data from the API
         """
+        self._enforce_projects_filter(issue_key)
         try:
             return self.jira.worklog(issue_key)  # type: ignore[attr-defined]
         except Exception as e:
@@ -214,6 +216,7 @@ class WorklogMixin(JiraClient):
         Raises:
             Exception: If there's an error getting the worklogs
         """
+        self._enforce_projects_filter(issue_key)
         try:
             # `jira.issue_get_worklog()` calls GET /issue/{key}/worklog without
             # pagination parameters, so Jira returns at most 20 entries by default.

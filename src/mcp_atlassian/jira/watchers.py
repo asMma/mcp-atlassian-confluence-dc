@@ -22,6 +22,7 @@ class WatchersMixin(JiraClient):
             Dictionary with watcher count, is_watching flag,
             and list of watchers.
         """
+        self._enforce_projects_filter(issue_key)
         result = self.jira.issue_get_watchers(issue_key)
 
         if not isinstance(result, dict):
@@ -58,6 +59,7 @@ class WatchersMixin(JiraClient):
         Returns:
             Success confirmation dictionary.
         """
+        self._enforce_projects_filter(issue_key)
         self.jira.issue_add_watcher(issue_key, user_identifier)
         return {
             "success": True,
@@ -88,6 +90,7 @@ class WatchersMixin(JiraClient):
         if not username and not account_id:
             raise ValueError("Either username or account_id must be provided")
 
+        self._enforce_projects_filter(issue_key)
         user_display = account_id or username
         self.jira.issue_delete_watcher(issue_key, user=username, account_id=account_id)
         return {

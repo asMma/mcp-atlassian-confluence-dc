@@ -65,6 +65,7 @@ class CommentsMixin(ConfluenceClient):
             # Get page info to extract space details
             page = self.confluence.get_page_by_id(page_id=page_id, expand="space")
             space_key = page.get("space", {}).get("key", "")
+            self._enforce_spaces_filter(space_key)
 
             # Get comments with expanded content
             comments_response = self.confluence.get_page_comments(
@@ -137,6 +138,7 @@ class CommentsMixin(ConfluenceClient):
         Returns:
             ConfluenceComment object if comment was added successfully, None otherwise
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             # Convert markdown to Confluence storage format if needed
             if not content.strip().startswith("<"):
@@ -189,6 +191,10 @@ class CommentsMixin(ConfluenceClient):
             # Convert markdown to Confluence storage format if needed
             if not content.strip().startswith("<"):
                 content = self.preprocessor.markdown_to_confluence_storage(content)
+
+            self._enforce_spaces_filter_for_page(
+                self._resolve_page_id_for_parent_comment(comment_id)
+            )
 
             v2_adapter = self._v2_adapter
             if v2_adapter:
@@ -287,6 +293,7 @@ class CommentsMixin(ConfluenceClient):
         Returns:
             List of ConfluenceComment models with location="inline"
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             v2_adapter = self._inline_v2_adapter
             if v2_adapter:
@@ -379,6 +386,7 @@ class CommentsMixin(ConfluenceClient):
         Returns:
             ConfluenceComment object if successful, None otherwise
         """
+        self._enforce_spaces_filter_for_page(page_id)
         try:
             # Convert markdown to Confluence storage format if needed
             if not content.strip().startswith("<"):

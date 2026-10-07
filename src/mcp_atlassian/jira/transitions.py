@@ -34,6 +34,7 @@ class TransitionsMixin(JiraClient, IssueOperationsProto, UsersOperationsProto):
             Exception: If there is an error getting transitions
         """
         try:
+            self._enforce_projects_filter(issue_key)
             transitions_data: object = self.jira.get_issue_transitions(issue_key)
             if not isinstance(transitions_data, list):
                 return []
@@ -90,6 +91,7 @@ class TransitionsMixin(JiraClient, IssueOperationsProto, UsersOperationsProto):
         Returns:
             Raw transitions data from the API with full 'to' status objects
         """
+        self._enforce_projects_filter(issue_key)
         response = self.jira.get_issue_transitions_full(issue_key)
         if isinstance(response, dict):
             transitions = response.get("transitions", [])
@@ -149,6 +151,7 @@ class TransitionsMixin(JiraClient, IssueOperationsProto, UsersOperationsProto):
                 if a comment is provided for a project listed in
                 JIRA_INTERNAL_ONLY_PROJECTS
         """
+        self._enforce_projects_filter(issue_key)
         if comment:
             self._enforce_internal_only_transition_comment(issue_key)
 

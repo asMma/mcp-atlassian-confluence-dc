@@ -179,6 +179,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error getting forms
         """
         try:
+            self._enforce_projects_filter(issue_key)
             response = self._make_forms_api_request("GET", f"/issue/{issue_key}/form")
 
             # API returns a plain array of forms
@@ -225,6 +226,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error getting form details
         """
         try:
+            self._enforce_projects_filter(issue_key)
             response = self._make_forms_api_request(
                 "GET", f"/issue/{issue_key}/form/{form_id}"
             )
@@ -279,6 +281,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error updating the form
         """
         try:
+            self._enforce_projects_filter(issue_key)
             # Transform answers from list format to the API's expected object format
             # API expects: {"answers": {"questionId": {"type": value}, ...}}
             # We receive: [{"questionId": "1", "type": "TEXT", "value": "foo"}, ...]
@@ -341,6 +344,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error adding the template
         """
         try:
+            self._enforce_projects_filter(issue_key)
             request_body = {"formTemplateId": template_id}
 
             response = self._make_forms_api_request(
@@ -365,6 +369,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error deleting the form
         """
         try:
+            self._enforce_projects_filter(issue_key)
             self._make_forms_api_request("DELETE", f"/issue/{issue_key}/form/{form_id}")
 
             logger.info(f"Successfully deleted form {form_id} from issue {issue_key}")
@@ -389,6 +394,7 @@ class FormsApiMixin(JiraClient):
             Exception: If there is an error getting attachments
         """
         try:
+            self._enforce_projects_filter(issue_key)
             response = self._make_forms_api_request(
                 "GET", f"/issue/{issue_key}/form/{form_id}/attachment"
             )

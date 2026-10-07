@@ -58,6 +58,8 @@ class AnalyticsMixin:
                 "Server/Data Center instances do not support the Analytics API."
             )
 
+        self._enforce_spaces_filter_for_page(page_id)
+
         # Get page title if requested
         page_title = None
         if include_title:

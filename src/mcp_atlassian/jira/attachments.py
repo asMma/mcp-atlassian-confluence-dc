@@ -124,6 +124,7 @@ class AttachmentsMixin(JiraClient, AttachmentsOperationsProto):
         Returns:
             A list of JiraAttachment instances.
         """
+        self._enforce_projects_filter(issue_key)
         logger.info(f"Fetching attachment metadata for {issue_key}")
         issue_data = self.jira.issue(issue_key, fields="attachment")
 
@@ -164,6 +165,7 @@ class AttachmentsMixin(JiraClient, AttachmentsOperationsProto):
                     'content_type', 'size', and 'data' (bytes)
                 failed (list[dict]): each dict has 'filename' and 'error'
         """
+        self._enforce_projects_filter(issue_key)
         logger.info(f"Fetching attachment contents for {issue_key}")
 
         issue_data = self.jira.issue(issue_key, fields="attachment")
@@ -273,6 +275,7 @@ class AttachmentsMixin(JiraClient, AttachmentsOperationsProto):
         Returns:
             A dictionary with download results
         """
+        self._enforce_projects_filter(issue_key)
         # Convert to absolute path if relative
         if not os.path.isabs(target_dir):
             target_dir = os.path.abspath(target_dir)
@@ -381,6 +384,7 @@ class AttachmentsMixin(JiraClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No file path provided"}
 
         try:
+            self._enforce_projects_filter(issue_key)
             # Confine the upload source to the workspace before it is read: reject
             # traversal/absolute paths that escape CWD (arbitrary file read /
             # exfiltration via a caller-supplied file_path).

@@ -45,6 +45,7 @@ class CommentsMixin(JiraClient):
             Exception: If there is an error getting comments
         """
         try:
+            self._enforce_projects_filter(issue_key)
             comments = self.jira.issue_get_comments(issue_key)
 
             if not isinstance(comments, dict):
@@ -227,6 +228,7 @@ class CommentsMixin(JiraClient):
                 exactly False
             Exception: If there is an error adding the comment
         """
+        self._enforce_projects_filter(issue_key)
         self._enforce_internal_only_add(issue_key, public)
 
         # ServiceDesk API path for internal/public comments
@@ -390,6 +392,7 @@ class CommentsMixin(JiraClient):
                 the target comment's visibility cannot be verified for
                 an internal-only project
         """
+        self._enforce_projects_filter(issue_key)
         self._enforce_internal_only_edit(issue_key, comment_id)
 
         try:

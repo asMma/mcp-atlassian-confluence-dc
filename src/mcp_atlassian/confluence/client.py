@@ -283,6 +283,86 @@ class ConfluenceClient:
             self.confluence._session.headers[header_name] = header_value
             logger.debug(f"Applied custom header: {header_name}")
 
+    def _space_allowed(self, space_key: str) -> bool:
+        """Check whether ``space_key`` is allowed by CONFLUENCE_SPACES_FILTER.
+
+        Returns True (no-op) whenever the filter is unset, which is the
+        default for every deployment that hasn't opted in to scoping a
+        shared credential to specific spaces.
+        """
+        filter_to_use = self.config.spaces_filter
+        if not filter_to_use:
+            return True
+        allowed = {s.strip().upper() for s in filter_to_use.split(",")}
+        return space_key.strip().upper() in allowed
+
+    def _enforce_spaces_filter(self, space_key: str) -> None:
+        """Reject ``space_key`` if CONFLUENCE_SPACES_FILTER excludes it.
+
+        ``config.spaces_filter`` scopes a shared credential to specific
+        spaces. Every entry point that acts on a page/space directly —
+        not only ``search()``, which applies its own allowlist — must call
+        this (directly, or via ``_enforce_spaces_filter_for_page``) or a
+        disallowed space could be reached simply by calling a different
+        tool instead of a search.
+
+        Args:
+            space_key: The space key (e.g. 'TEAM')
+
+        Raises:
+            ValueError: If a spaces filter is configured and the space is
+                not in it.
+        """
+        if not self._space_allowed(space_key):
+            msg = f"Space '{space_key}' is restricted by configuration"
+            raise ValueError(msg)
+
+    def _resolve_page_space_key(self, page_id: str) -> str:
+        """Resolve a page ID to its space key with a minimal API call.
+
+        Args:
+            page_id: The Confluence page ID.
+
+        Returns:
+            The page's space key.
+
+        Raises:
+            ValueError: If the page or its space key cannot be resolved.
+        """
+        v2_adapter = self._v2_adapter
+        if v2_adapter:
+            page = v2_adapter.get_page(page_id=page_id)
+        else:
+            page = self.confluence.get_page_by_id(page_id=page_id, expand="space")
+        if not isinstance(page, dict):
+            raise ValueError(f"Could not resolve page '{page_id}' to check its space.")
+        space_key = page.get("space", {}).get("key", "")
+        if not space_key:
+            raise ValueError(
+                f"Could not resolve the space for page '{page_id}' to check it "
+                "against the configured space allowlist."
+            )
+        return space_key
+
+    def _enforce_spaces_filter_for_page(self, page_id: str) -> None:
+        """Reject a page if CONFLUENCE_SPACES_FILTER excludes its space.
+
+        Resolves the page's space (one extra API call) before checking,
+        since a page ID carries no space information on its own. Skips
+        the lookup entirely when no filter is configured.
+
+        Args:
+            page_id: The Confluence page ID.
+
+        Raises:
+            ValueError: If a spaces filter is configured and the page's
+                space is not in it, or the space can't be resolved.
+        """
+        if not self.config.spaces_filter:
+            return
+        space_key = self._resolve_page_space_key(page_id)
+        self._enforce_spaces_filter(space_key)
+
     def _process_html_content(
         self, html_content: str, space_key: str
     ) -> tuple[str, str]:

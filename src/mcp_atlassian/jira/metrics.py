@@ -51,6 +51,7 @@ class MetricsMixin(JiraClient, IssueOperationsProto):
             ValueError: If the issue cannot be found
             Exception: If there is an error retrieving the issue
         """
+        self._enforce_projects_filter(issue_key)
         try:
             # Build fields list based on what we need
             fields_needed = ["status"]

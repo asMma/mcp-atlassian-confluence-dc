@@ -22,6 +22,37 @@ logger = logging.getLogger("mcp-jira")
 class CustomerRequestsMixin(JiraClient):
     """Mixin for Jira Service Management customer request operations."""
 
+    def _enforce_projects_filter_for_service_desk(self, service_desk_id: str) -> None:
+        """Reject a service desk whose backing project is excluded by
+        JIRA_PROJECTS_FILTER.
+
+        Service desk requests don't carry a project/issue key up front, so
+        the project has to be resolved from the service desk itself before
+        any JSM read/write can be allowed through. Skips the lookup
+        entirely when no filter is configured.
+
+        Args:
+            service_desk_id: The service desk ID.
+
+        Raises:
+            ValueError: If a projects filter is configured and the service
+                desk's project is not in it, or the project can't be
+                resolved.
+        """
+        if not self.config.projects_filter:
+            return
+        response = self.jira.get(f"rest/servicedeskapi/servicedesk/{service_desk_id}")
+        project_key = (
+            response.get("projectKey") if isinstance(response, dict) else None
+        )
+        if not project_key:
+            raise ValueError(
+                f"Could not resolve the project backing service desk "
+                f"'{service_desk_id}' to check it against the configured "
+                "project allowlist."
+            )
+        self._enforce_projects_filter_for_project(project_key)
+
     @staticmethod
     def _trace_prefix(
         service_desk_id: str,
@@ -390,6 +421,7 @@ class CustomerRequestsMixin(JiraClient):
             raise ValueError("start_at must be >= 0")
         if limit < 1:
             raise ValueError("limit must be >= 1")
+        self._enforce_projects_filter_for_service_desk(service_desk_id)
 
         response = self.jira.get(
             f"rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype",
@@ -417,6 +449,7 @@ class CustomerRequestsMixin(JiraClient):
             raise ValueError("Service desk ID is required")
         if not request_type_id or not request_type_id.strip():
             raise ValueError("Request type ID is required")
+        self._enforce_projects_filter_for_service_desk(service_desk_id)
 
         response = self.jira.get(
             "rest/servicedeskapi/servicedesk/"
@@ -508,6 +541,7 @@ class CustomerRequestsMixin(JiraClient):
             raise ValueError("Service desk ID is required")
         if not files:
             return []
+        self._enforce_projects_filter_for_service_desk(service_desk_id)
 
         multipart_files = []
         for file in files:

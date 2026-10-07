@@ -102,6 +102,7 @@ class ProjectAnalysisMixin(JiraClient):
             MCPAtlassianAuthenticationError: If authentication fails.
             Exception: On API or query errors.
         """
+        self._enforce_projects_filter_for_project(project_key)
         jql = f'project = "{project_key}" AND issuetype = Epic ORDER BY updated DESC'
         epic_dicts = self._fetch_project_issues_with_links(jql, max_epics)
 
@@ -183,6 +184,7 @@ class ProjectAnalysisMixin(JiraClient):
             MCPAtlassianAuthenticationError: If authentication fails.
             Exception: On API or query errors.
         """
+        self._enforce_projects_filter_for_project(project_key)
         jql = f'project = "{project_key}" ORDER BY updated DESC'
         issues = self._fetch_project_issues_with_links(jql, max_issues)
 

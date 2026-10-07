@@ -106,25 +106,8 @@ class IssuesMixin(
             Exception: If there is an error retrieving the issue
         """
         try:
-            # Obtain the projects filter from the config.
-            # These should NOT be overridden by the request.
-            filter_to_use = self.config.projects_filter
-
-            # Apply projects filter if present
-            if filter_to_use:
-                # Split projects filter by commas and handle possible whitespace
-                projects = [p.strip() for p in filter_to_use.split(",")]
-
-                # Obtain the project key from issue_key
-                issue_key_project = issue_key.split("-")[0]
-
-                if issue_key_project not in projects:
-                    # If the project key not in the filter, return an empty issue
-                    msg = (
-                        "Issue with project prefix "
-                        f"'{issue_key_project}' are restricted by configuration"
-                    )
-                    raise ValueError(msg)
+            # config.projects_filter should NOT be overridden by the request.
+            self._enforce_projects_filter(issue_key)
 
             # Determine fields_param: use provided fields or default from constant
             fields_param = fields
@@ -639,6 +622,7 @@ class IssuesMixin(
                     "Issue type is required to create an issue. "
                     "Provide issue_type like 'Task', 'Story', or 'Bug'."
                 )
+            self._enforce_projects_filter_for_project(project_key)
 
             # Handle Epic and Subtask issue type names across different languages
             actual_issue_id = None
@@ -1160,6 +1144,7 @@ class IssuesMixin(
             # Validate required fields
             if not issue_key:
                 raise ValueError("Issue key is required")
+            self._enforce_projects_filter(issue_key)
 
             return_fields_param = self._normalize_return_fields(return_fields)
             update_fields = fields or {}
@@ -1341,6 +1326,7 @@ class IssuesMixin(
             ValueError: If the user cannot be resolved or assignment fails
         """
         try:
+            self._enforce_projects_filter(issue_key)
             if assignee is None or assignee == "":
                 # Unassign: the atlassian-python-api accepts None for unassignment
                 self.jira.assign_issue(issue_key, None)
@@ -1535,6 +1521,7 @@ class IssuesMixin(
             Exception: If there is an error deleting the issue
         """
         try:
+            self._enforce_projects_filter(issue_key)
             self.jira.delete_issue(issue_key)
             return True
         except Exception as e:
@@ -1577,6 +1564,9 @@ class IssuesMixin(
             raise NotImplementedError(
                 "Cross-project issue move is only available on Jira Cloud."
             )
+
+        self._enforce_projects_filter(issue_key)
+        self._enforce_projects_filter_for_project(target_project_key)
 
         try:
             target_issue_type_id = self._get_target_issue_type_id(
@@ -1820,6 +1810,7 @@ class IssuesMixin(
             Exception: If there is an error transitioning the issue
         """
         try:
+            self._enforce_projects_filter(issue_key)
             self.jira.set_issue_status(
                 issue_key=issue_key, status_name=transition_id, fields=None, update=None
             )
@@ -1873,6 +1864,7 @@ class IssuesMixin(
                     raise ValueError(
                         f"Missing required fields for issue: {project_key=}, {summary=}, {issue_type=}"
                     )
+                self._enforce_projects_filter_for_project(project_key)
 
                 # Prepare fields dictionary
                 fields = {
@@ -1995,6 +1987,13 @@ class IssuesMixin(
             error_msg = "Batch get issue changelogs is only available on Jira Cloud."
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
+
+        # Numeric issue IDs don't carry a project prefix we can check without
+        # an extra lookup per ID; only entries given as "PROJ-123"-style keys
+        # can be enforced here.
+        for issue_id_or_key in issue_ids_or_keys:
+            if "-" in issue_id_or_key:
+                self._enforce_projects_filter(issue_id_or_key)
 
         # Get paged api results
         paged_api_results = self.get_paged(
