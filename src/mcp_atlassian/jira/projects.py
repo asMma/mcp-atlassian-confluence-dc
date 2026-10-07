@@ -31,6 +31,10 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
         Returns:
             List of simplified project data dictionaries
         """
+        if not self.config.projects_filter:
+            # Fails closed: no allowlist configured means no project is
+            # visible, not every project the credential can see.
+            return []
         try:
             # The bare /project list omits descriptions unless explicitly expanded.
             projects = self.jira.projects(
@@ -43,13 +47,12 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
                 for p in projects
                 if isinstance(p, dict)
             ]
-            if self.config.projects_filter:
-                allowed_keys = {
-                    k.strip().upper() for k in self.config.projects_filter.split(",")
-                }
-                result = [
-                    p for p in result if str(p.get("key", "")).upper() in allowed_keys
-                ]
+            allowed_keys = {
+                k.strip().upper() for k in self.config.projects_filter.split(",")
+            }
+            result = [
+                p for p in result if str(p.get("key", "")).upper() in allowed_keys
+            ]
             return result
 
         except Exception as e:
@@ -77,6 +80,10 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
         Returns:
             List of matching project data dictionaries
         """
+        if not self.config.projects_filter:
+            # Fails closed: no allowlist configured means no project is
+            # visible, not every project the credential can see.
+            return []
         try:
             is_cloud = self.config.is_cloud
             endpoint = (
@@ -105,14 +112,13 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
                     p for p in projects if str(p.get("id")) not in excluded_project_ids
                 ]
 
-            # Apply project filter if configured
-            if self.config.projects_filter:
-                allowed_keys = {
-                    k.strip().upper() for k in self.config.projects_filter.split(",")
-                }
-                projects = [
-                    p for p in projects if p.get("key", "").upper() in allowed_keys
-                ]
+            # Apply project filter (guaranteed configured, checked above)
+            allowed_keys = {
+                k.strip().upper() for k in self.config.projects_filter.split(",")
+            }
+            projects = [
+                p for p in projects if p.get("key", "").upper() in allowed_keys
+            ]
 
             return projects
 

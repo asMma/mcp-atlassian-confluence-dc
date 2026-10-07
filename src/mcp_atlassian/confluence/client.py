@@ -286,13 +286,14 @@ class ConfluenceClient:
     def _space_allowed(self, space_key: str) -> bool:
         """Check whether ``space_key`` is allowed by CONFLUENCE_SPACES_FILTER.
 
-        Returns True (no-op) whenever the filter is unset, which is the
-        default for every deployment that hasn't opted in to scoping a
-        shared credential to specific spaces.
+        Fails closed: CONFLUENCE_SPACES_FILTER must be explicitly configured
+        with the space(s) this server may touch. When it is unset or empty,
+        every space is denied — there is no "no filter configured means
+        unrestricted access" default.
         """
         filter_to_use = self.config.spaces_filter
         if not filter_to_use:
-            return True
+            return False
         allowed = {s.strip().upper() for s in filter_to_use.split(",")}
         return space_key.strip().upper() in allowed
 
@@ -348,18 +349,24 @@ class ConfluenceClient:
         """Reject a page if CONFLUENCE_SPACES_FILTER excludes its space.
 
         Resolves the page's space (one extra API call) before checking,
-        since a page ID carries no space information on its own. Skips
-        the lookup entirely when no filter is configured.
+        since a page ID carries no space information on its own. Fails
+        closed: denies immediately, without even resolving the page, when
+        no filter is configured.
 
         Args:
             page_id: The Confluence page ID.
 
         Raises:
-            ValueError: If a spaces filter is configured and the page's
-                space is not in it, or the space can't be resolved.
+            ValueError: If no spaces filter is configured, or one is
+                configured and the page's space is not in it, or the space
+                can't be resolved.
         """
         if not self.config.spaces_filter:
-            return
+            raise ValueError(
+                "CONFLUENCE_SPACES_FILTER is not configured. For safety, "
+                "this server denies all Confluence access until an "
+                "administrator sets an allowlist of space keys."
+            )
         space_key = self._resolve_page_space_key(page_id)
         self._enforce_spaces_filter(space_key)
 

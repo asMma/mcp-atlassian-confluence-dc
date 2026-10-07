@@ -102,17 +102,27 @@ class SearchMixin(ConfluenceClient):
             List of ConfluencePage models containing search results
 
         Raises:
+            ValueError: If CONFLUENCE_SPACES_FILTER is not configured, or
+                the query has unbalanced quotes/parentheses.
             MCPAtlassianAuthenticationError: If authentication fails with the
                 Confluence API (401/403)
         """
         limit = clamp_limit(limit, context="confluence.search")
 
-        # config.spaces_filter is a hard boundary and is always applied; a
-        # caller-supplied spaces_filter may only *narrow* within it (both ANDed),
-        # never replace it — otherwise the tool argument would defeat the
-        # operator's allowlist in shared-credential deployments.
+        # config.spaces_filter is a hard boundary and must be configured:
+        # fails closed with no results if it is unset, rather than falling
+        # back to unrestricted search. A caller-supplied spaces_filter may
+        # only *narrow* within it (both ANDed), never replace it or stand in
+        # for it — otherwise the tool argument would defeat the operator's
+        # allowlist in shared-credential deployments.
+        if not self.config.spaces_filter:
+            raise ValueError(
+                "CONFLUENCE_SPACES_FILTER is not configured. For safety, "
+                "this server denies all Confluence search access until an "
+                "administrator sets an allowlist of space keys."
+            )
         filters_to_apply = [f for f in (self.config.spaces_filter, spaces_filter) if f]
-        if filters_to_apply and cql and not has_balanced_quotes_and_parens(cql):
+        if cql and not has_balanced_quotes_and_parens(cql):
             raise ValueError(
                 "Invalid CQL: unbalanced quotes or parentheses. A query in "
                 "this state cannot be safely combined with the configured "

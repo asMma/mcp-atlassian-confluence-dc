@@ -45,14 +45,12 @@
     {
       "id": "confluenceSpacesFilter",
       "type": "promptString",
-      "description": "Clés des espaces Confluence autorisés, séparées par des virgules (ex: DEV,TEAM). Laisser vide = tous les espaces accessibles au jeton.",
-      "default": ""
+      "description": "OBLIGATOIRE : clés des espaces Confluence autorisés, séparées par des virgules (ex: DEV,TEAM). Laisser vide = AUCUN espace accessible, l'assistant ne pourra rien faire sur Confluence."
     },
     {
       "id": "jiraProjectsFilter",
       "type": "promptString",
-      "description": "Clés des projets Jira autorisés, séparées par des virgules (ex: SUPPORT,PROD). Laisser vide = tous les projets accessibles au jeton.",
-      "default": ""
+      "description": "OBLIGATOIRE : clés des projets Jira autorisés, séparées par des virgules (ex: SUPPORT,PROD). Laisser vide = AUCUN projet accessible, l'assistant ne pourra rien faire sur Jira."
     }
   ]
 }

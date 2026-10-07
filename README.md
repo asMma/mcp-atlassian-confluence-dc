@@ -60,7 +60,7 @@ Gardez ces deux jetons de côté temporairement, vous en aurez besoin à l'étap
 2. Cliquez sur l'icône outils (🔧) et vérifiez que `confluence-dc` et `jira-dc` apparaissent dans la liste.
 3. La première fois que vous posez une question touchant Confluence ou Jira, VS Code vous demandera successivement :
    - de coller le jeton correspondant (celui de l'étape 3) ;
-   - les **clés des espaces Confluence** (puis des **projets Jira**) que l'assistant a le droit d'utiliser, séparées par des virgules (ex: `DEV,TEAM`). **Vous pouvez laisser ce champ vide** pour ne poser aucune restriction, mais le renseigner est fortement recommandé : c'est ce qui empêche l'assistant de créer ou modifier quoi que ce soit en dehors des espaces/projets que vous avez listés, même en cas d'erreur de sa part (voir section 3 ci-dessous).
+   - les **clés des espaces Confluence** (puis des **projets Jira**) que l'assistant a le droit d'utiliser, séparées par des virgules (ex: `DEV,TEAM`). **Ce champ est obligatoire** : si vous le laissez vide, l'assistant ne pourra accéder à AUCUN espace/projet et aucune commande Confluence/Jira ne fonctionnera. C'est volontaire (voir section 3 ci-dessous) — tapez bien les clés exactes des espaces/projets que vous voulez utiliser.
 
 C'est prêt ! Passez à la section suivante pour l'utiliser.
 
@@ -128,9 +128,9 @@ présentation client", assigné à moi, avec une échéance à vendredi.
 
 Ce MCP ne permet que de **créer et mettre à jour** du contenu — il n'y a pas de bouton "supprimer" un ticket, une page ou une pièce jointe, ce risque n'existe donc pas.
 
-Le risque qui reste : que Copilot (ou vous) crée une page/un ticket dans le mauvais espace/projet, parmi tous ceux auxquels votre jeton a accès. Si vous avez renseigné les champs **"espaces Confluence autorisés"** et **"projets Jira autorisés"** à l'étape 5, c'est déjà réglé : toute tentative de création ou modification en dehors de cette liste est automatiquement rejetée, quoi que demande la conversation.
+Le risque qui reste : que Copilot (ou vous) crée une page/un ticket dans le mauvais espace/projet, parmi tous ceux auxquels votre jeton a accès. C'est pour ça que les champs **"espaces Confluence autorisés"** et **"projets Jira autorisés"** (étape 5) sont **obligatoires** : par défaut, sans liste renseignée, l'assistant n'a accès à **aucun** espace ni **aucun** projet — ce n'est qu'en listant explicitement les clés que vous voulez utiliser qu'il peut agir, et uniquement sur celles-ci. Toute tentative de création ou modification en dehors de cette liste est automatiquement rejetée, quoi que demande la conversation.
 
-Si vous avez laissé ces champs vides et voulez les activer maintenant : rouvrez la palette de commandes de VS Code (**Cmd/Ctrl+Shift+P**) → *MCP: Reset Cached Inputs*, puis reposez une question à Copilot — il vous les redemandera.
+Pour changer cette liste plus tard : rouvrez la palette de commandes de VS Code (**Cmd/Ctrl+Shift+P**) → *MCP: Reset Cached Inputs*, puis reposez une question à Copilot — il vous les redemandera.
 
 ---
 
@@ -143,6 +143,7 @@ Si vous avez laissé ces champs vides et voulez les activer maintenant : rouvrez
 | "Je ne trouve pas Jetons d'accès personnels dans mon profil" | Cette option peut être désactivée par votre administrateur Confluence/Jira — contactez votre IT. |
 | Copilot crée la page/le ticket dans le mauvais espace/projet | Précisez toujours la clé exacte de l'espace (ex: `DEV`) ou du projet (ex: `SUPPORT`) dans votre demande, et renseignez la liste des espaces/projets autorisés (section 3) pour bloquer toute tentative hors de cette liste. |
 | Message d'erreur "is restricted by configuration" | Normal : l'espace/le projet demandé n'est pas dans votre liste d'espaces/projets autorisés (section 3). Si c'est une erreur, ajoutez-le à la liste via *MCP: Reset Cached Inputs*. |
+| Message d'erreur "is not configured" / rien ne fonctionne du tout sur Confluence ou Jira | Vous avez laissé le champ "espaces/projets autorisés" vide à l'étape 5 — c'est obligatoire. Rouvrez la palette de commandes VS Code (**Cmd/Ctrl+Shift+P**) → *MCP: Reset Cached Inputs*, reposez une question, et renseignez cette fois au moins une clé. |
 
 ---
 
@@ -158,12 +159,14 @@ Seuls les fichiers nécessaires à l'exécution ont été conservés (`src/`, `p
 - **Bandit** (analyse statique) : 0 issue High, aucun secret en dur.
 - **pip-audit** sur l'environnement réellement installé (121 paquets hors outils de dev) : 12 dépendances transitives avec des avis Medium (aucun Critical/High) — **corrigées** dans ce repo via un `uv.lock` mis à jour (`urllib3`, `idna`, `pyjwt`, `oauthlib`, `cryptography`, `pydantic-settings`, `soupsieve`, `pymdown-extensions`, `click`, `anyio`, `python-dotenv`, `pygments`). `pip-audit` ne remonte plus rien après coup.
 - **Revue de sécurité complète du code applicatif** (audit manuel exhaustif, pas uniquement automatisé) : une faille de contournement des allowlists `JIRA_PROJECTS_FILTER`/`CONFLUENCE_SPACES_FILTER` a été trouvée et corrigée — ces filtres n'étaient appliqués que sur la recherche et `get_issue`, laissant ~70 autres outils (lecture et écriture) totalement non scopés dans un déploiement à identifiants partagés. Voir l'historique des commits pour le détail.
-- Le code de `mcp-atlassian` lui-même n'a pas été modifié au-delà de ces correctifs : les dépendances tierces ont été relevées vers des versions corrigées, et deux failles d'allowlist applicative ont été comblées.
+- **Posture "fail-closed" sur `JIRA_PROJECTS_FILTER`/`CONFLUENCE_SPACES_FILTER`** (écart volontaire par rapport à l'amont) : ces deux variables sont **obligatoires** dans cette version. Contrairement au comportement upstream (variable non définie = aucune restriction = accès à tout ce que le jeton peut voir), ce fork refuse systématiquement tout accès Confluence/Jira tant qu'elles ne sont pas explicitement renseignées — aucun "accès par défaut" n'existe. Voir `.env.example`.
+- **Suppression retirée du périmètre** : les outils `delete_issue` (Jira), `delete_page` et `delete_attachment` (Confluence) ont été retirés du registre MCP — ce serveur ne permet que de créer et mettre à jour du contenu, jamais de le supprimer. Les méthodes de bas niveau existent toujours dans le code mais ne sont plus exposées à aucun client MCP.
+- Le code de `mcp-atlassian` lui-même n'a pas été modifié au-delà de ces correctifs : les dépendances tierces ont été relevées vers des versions corrigées, deux failles d'allowlist applicative ont été comblées, la posture par défaut de l'allowlist a été durcie en fail-closed, et les outils de suppression ont été retirés.
 - `version` a été fixée en dur à `0.23.1` dans `pyproject.toml` (le versionnage dynamique basé sur git de l'amont ne s'applique pas à cette copie sans son historique).
 
 ### Configuration avancée
 
-Voir `.env.example` pour la liste complète des variables supportées (OAuth, mTLS, proxy, filtrage par projet/espace `JIRA_PROJECTS_FILTER`/`CONFLUENCE_SPACES_FILTER`, mode lecture seule, etc.).
+Voir `.env.example` pour la liste complète des variables supportées (OAuth, mTLS, proxy, mode lecture seule, etc.). `JIRA_PROJECTS_FILTER`/`CONFLUENCE_SPACES_FILTER` y sont documentées comme obligatoires (voir ci-dessus).
 
 ### Mettre à jour / re-auditer
 

@@ -791,19 +791,25 @@ class AttachmentsMixin(ConfluenceClient, AttachmentsOperationsProto):
             return {"success": False, "error": "No attachment ID provided"}
 
         try:
-            if self.config.spaces_filter:
-                # Attachments are a content type of their own (not a page), so
-                # resolve via the v1 content API directly rather than the v2
-                # pages endpoint used for page lookups.
-                attachment_content = self.confluence.get_page_by_id(
-                    page_id=attachment_id, expand="space"
+            if not self.config.spaces_filter:
+                raise ValueError(
+                    "CONFLUENCE_SPACES_FILTER is not configured. For "
+                    "safety, this server denies all Confluence access "
+                    "until an administrator sets an allowlist of space "
+                    "keys."
                 )
-                space_key = (
-                    attachment_content.get("space", {}).get("key", "")
-                    if isinstance(attachment_content, dict)
-                    else ""
-                )
-                self._enforce_spaces_filter(space_key)
+            # Attachments are a content type of their own (not a page), so
+            # resolve via the v1 content API directly rather than the v2
+            # pages endpoint used for page lookups.
+            attachment_content = self.confluence.get_page_by_id(
+                page_id=attachment_id, expand="space"
+            )
+            space_key = (
+                attachment_content.get("space", {}).get("key", "")
+                if isinstance(attachment_content, dict)
+                else ""
+            )
+            self._enforce_spaces_filter(space_key)
             logger.info(f"Deleting attachment {attachment_id}")
 
             # Use v2 API for OAuth authentication, v1 API for token/basic auth

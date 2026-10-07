@@ -28,15 +28,27 @@ class SearchMixin(JiraClient, IssueOperationsProto):
         """Constrain a JQL query to the allowed projects (JIRA_PROJECTS_FILTER).
 
         Every JQL-issuing path routes through here so none can escape the project
-        allowlist. ``config.projects_filter`` is a hard boundary and is always
-        applied; a caller-supplied ``projects_filter`` may only *narrow* within it
-        (both are ANDed), never replace it — otherwise the tool argument would
-        defeat the operator's allowlist in shared-credential deployments.
+        allowlist. ``config.projects_filter`` is a hard boundary and must be
+        configured: fails closed with no results if it is unset, rather than
+        falling back to unrestricted search. A caller-supplied ``projects_filter``
+        may only *narrow* within it (both are ANDed), never replace it or stand
+        in for it — otherwise the tool argument would defeat the operator's
+        allowlist in shared-credential deployments.
+
+        Raises:
+            ValueError: If JIRA_PROJECTS_FILTER is not configured, or the
+                query has unbalanced quotes/parentheses.
         """
+        if not self.config.projects_filter:
+            raise ValueError(
+                "JIRA_PROJECTS_FILTER is not configured. For safety, this "
+                "server denies all Jira search access until an administrator "
+                "sets an allowlist of project keys."
+            )
         filters_to_apply = [
             f for f in (self.config.projects_filter, projects_filter) if f
         ]
-        if filters_to_apply and jql and not has_balanced_quotes_and_parens(jql):
+        if jql and not has_balanced_quotes_and_parens(jql):
             raise ValueError(
                 "Invalid JQL: unbalanced quotes or parentheses. A query in "
                 "this state cannot be safely combined with the configured "

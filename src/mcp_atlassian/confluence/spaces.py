@@ -24,8 +24,12 @@ class SpacesMixin(ConfluenceClient):
         Returns:
             Dictionary containing space information with results and metadata
         """
+        if not self.config.spaces_filter:
+            # Fails closed: no allowlist configured means no space is
+            # visible, not every space the credential can see.
+            return {"results": [], "size": 0}
         spaces = self.confluence.get_all_spaces(start=start, limit=limit)
-        if self.config.spaces_filter and isinstance(spaces, dict):
+        if isinstance(spaces, dict):
             allowed = {s.strip().upper() for s in self.config.spaces_filter.split(",")}
             results = spaces.get("results", [])
             if isinstance(results, list):
@@ -51,6 +55,10 @@ class SpacesMixin(ConfluenceClient):
         Returns:
             Dictionary of space keys to space information
         """
+        if not self.config.spaces_filter:
+            # Fails closed: no allowlist configured means no space is
+            # visible, not every space the credential can see.
+            return {}
         try:
             # Use CQL to find content the user has contributed to
             cql = "contributor = currentUser() order by lastmodified DESC"
@@ -93,15 +101,12 @@ class SpacesMixin(ConfluenceClient):
                     space_name = space_name or f"Space {space_key}"
                     spaces[space_key] = {"key": space_key, "name": space_name}
 
-            if self.config.spaces_filter:
-                allowed = {
-                    s.strip().upper() for s in self.config.spaces_filter.split(",")
-                }
-                spaces = {
-                    key: value
-                    for key, value in spaces.items()
-                    if key.upper() in allowed
-                }
+            allowed = {
+                s.strip().upper() for s in self.config.spaces_filter.split(",")
+            }
+            spaces = {
+                key: value for key, value in spaces.items() if key.upper() in allowed
+            }
 
             return spaces
 

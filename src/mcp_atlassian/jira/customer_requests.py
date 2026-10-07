@@ -28,19 +28,24 @@ class CustomerRequestsMixin(JiraClient):
 
         Service desk requests don't carry a project/issue key up front, so
         the project has to be resolved from the service desk itself before
-        any JSM read/write can be allowed through. Skips the lookup
-        entirely when no filter is configured.
+        any JSM read/write can be allowed through. Fails closed: denies
+        immediately, without even resolving the service desk, when no
+        filter is configured.
 
         Args:
             service_desk_id: The service desk ID.
 
         Raises:
-            ValueError: If a projects filter is configured and the service
-                desk's project is not in it, or the project can't be
-                resolved.
+            ValueError: If no projects filter is configured, or one is
+                configured and the service desk's project is not in it, or
+                the project can't be resolved.
         """
         if not self.config.projects_filter:
-            return
+            raise ValueError(
+                "JIRA_PROJECTS_FILTER is not configured. For safety, this "
+                "server denies all Jira Service Management access until an "
+                "administrator sets an allowlist of project keys."
+            )
         response = self.jira.get(f"rest/servicedeskapi/servicedesk/{service_desk_id}")
         project_key = (
             response.get("projectKey") if isinstance(response, dict) else None

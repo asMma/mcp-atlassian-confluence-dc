@@ -363,13 +363,14 @@ class JiraClient:
     def _project_allowed(self, project_key: str) -> bool:
         """Check whether ``project_key`` is allowed by JIRA_PROJECTS_FILTER.
 
-        Returns True (no-op) whenever the filter is unset, which is the
-        default for every deployment that hasn't opted in to scoping a
-        shared credential to specific projects.
+        Fails closed: JIRA_PROJECTS_FILTER must be explicitly configured
+        with the project(s) this server may touch. When it is unset or
+        empty, every project is denied — there is no "no filter configured
+        means unrestricted access" default.
         """
         filter_to_use = self.config.projects_filter
         if not filter_to_use:
-            return True
+            return False
         allowed = {normalize_project_key(p) for p in filter_to_use.split(",")}
         return normalize_project_key(project_key) in allowed
 
@@ -578,17 +579,22 @@ class JiraClient:
             payload["released"] = released
         if not payload:
             raise ValueError("update_version requires at least one field to update")
-        if self.config.projects_filter:
-            existing = self.jira.get(f"/rest/api/2/version/{version_id}")
-            project_id = existing.get("projectId") if isinstance(existing, dict) else None
-            project = self.jira.get(f"/rest/api/2/project/{project_id}")
-            project_key = project.get("key") if isinstance(project, dict) else None
-            if not project_key:
-                raise ValueError(
-                    f"Could not resolve version '{version_id}' to a project to "
-                    "check it against the configured project allowlist."
-                )
-            self._enforce_projects_filter_for_project(project_key)
+        if not self.config.projects_filter:
+            raise ValueError(
+                "JIRA_PROJECTS_FILTER is not configured. For safety, this "
+                "server denies all Jira write access until an administrator "
+                "sets an allowlist of project keys."
+            )
+        existing = self.jira.get(f"/rest/api/2/version/{version_id}")
+        project_id = existing.get("projectId") if isinstance(existing, dict) else None
+        project = self.jira.get(f"/rest/api/2/project/{project_id}")
+        project_key = project.get("key") if isinstance(project, dict) else None
+        if not project_key:
+            raise ValueError(
+                f"Could not resolve version '{version_id}' to a project to "
+                "check it against the configured project allowlist."
+            )
+        self._enforce_projects_filter_for_project(project_key)
         logger.info(f"Updating Jira version {version_id}: {payload}")
         result = self.jira.put(f"/rest/api/2/version/{version_id}", data=payload)
         if not isinstance(result, dict):
