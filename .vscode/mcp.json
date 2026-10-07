@@ -1,0 +1,44 @@
+{
+  "servers": {
+    "confluence-dc": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run", "--project", "/chemin/vers/mcp-atlassian", "--frozen",
+        "mcp-atlassian"
+      ],
+      "env": {
+        "CONFLUENCE_URL": "https://confluence.tonentreprise.com",
+        "CONFLUENCE_PERSONAL_TOKEN": "${input:confluencePat}",
+        "CONFLUENCE_SSL_VERIFY": "true"
+      }
+    },
+    "jira-dc": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run", "--project", "/chemin/vers/mcp-atlassian", "--frozen",
+        "mcp-atlassian"
+      ],
+      "env": {
+        "JIRA_URL": "https://jira.tonentreprise.com",
+        "JIRA_PERSONAL_TOKEN": "${input:jiraPat}",
+        "JIRA_SSL_VERIFY": "true"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "confluencePat",
+      "type": "promptString",
+      "description": "Confluence Data Center Personal Access Token",
+      "password": true
+    },
+    {
+      "id": "jiraPat",
+      "type": "promptString",
+      "description": "Jira Data Center Personal Access Token",
+      "password": true
+    }
+  ]
+}
