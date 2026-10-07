@@ -15,6 +15,7 @@ from ..models.confluence.common import ConfluenceUser
 from ..models.confluence.search import get_search_result_identifier
 from ..utils.decorators import handle_atlassian_api_errors
 from ..utils.pagination import clamp_limit
+from ..utils.query_validation import has_balanced_quotes_and_parens
 from .client import ConfluenceClient
 from .utils import quote_cql_identifier_if_needed
 
@@ -110,9 +111,15 @@ class SearchMixin(ConfluenceClient):
         # caller-supplied spaces_filter may only *narrow* within it (both ANDed),
         # never replace it — otherwise the tool argument would defeat the
         # operator's allowlist in shared-credential deployments.
-        for filter_str in (self.config.spaces_filter, spaces_filter):
-            if filter_str:
-                cql = self._and_spaces_filter(cql, filter_str)
+        filters_to_apply = [f for f in (self.config.spaces_filter, spaces_filter) if f]
+        if filters_to_apply and cql and not has_balanced_quotes_and_parens(cql):
+            raise ValueError(
+                "Invalid CQL: unbalanced quotes or parentheses. A query in "
+                "this state cannot be safely combined with the configured "
+                "spaces allowlist."
+            )
+        for filter_str in filters_to_apply:
+            cql = self._and_spaces_filter(cql, filter_str)
 
         # Execute the CQL search query. Expand content.history and
         # content.version so each result carries created/updated/author and

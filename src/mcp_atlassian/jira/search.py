@@ -10,6 +10,7 @@ from requests.exceptions import HTTPError
 from ..models.jira import JiraSearchResult
 from ..utils.decorators import handle_auth_errors
 from ..utils.pagination import clamp_limit
+from ..utils.query_validation import has_balanced_quotes_and_parens
 from .client import JiraClient
 from .constants import DEFAULT_READ_JIRA_FIELDS
 from .protocols import IssueOperationsProto
@@ -32,9 +33,17 @@ class SearchMixin(JiraClient, IssueOperationsProto):
         (both are ANDed), never replace it — otherwise the tool argument would
         defeat the operator's allowlist in shared-credential deployments.
         """
-        for filter_str in (self.config.projects_filter, projects_filter):
-            if filter_str:
-                jql = self._and_projects_filter(jql, filter_str)
+        filters_to_apply = [
+            f for f in (self.config.projects_filter, projects_filter) if f
+        ]
+        if filters_to_apply and jql and not has_balanced_quotes_and_parens(jql):
+            raise ValueError(
+                "Invalid JQL: unbalanced quotes or parentheses. A query in "
+                "this state cannot be safely combined with the configured "
+                "project allowlist."
+            )
+        for filter_str in filters_to_apply:
+            jql = self._and_projects_filter(jql, filter_str)
         return jql
 
     def _and_projects_filter(self, jql: str, filter_to_use: str) -> str:
