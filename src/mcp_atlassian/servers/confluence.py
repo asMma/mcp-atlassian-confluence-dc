@@ -1145,51 +1145,6 @@ async def update_page_section(
 
 @confluence_mcp.tool(
     tags={"confluence", "write", "toolset:confluence_pages"},
-    annotations={"title": "Delete Page", "destructiveHint": True},
-)
-@check_write_access
-async def delete_page(
-    ctx: Context,
-    page_id: Annotated[str, Field(description="The ID of the page to delete")],
-) -> str:
-    """Delete an existing Confluence page.
-
-    Args:
-        ctx: The FastMCP context.
-        page_id: The ID of the page to delete.
-
-    Returns:
-        JSON string indicating success or failure.
-
-    Raises:
-        ValueError: If Confluence client is not configured or available.
-    """
-    confluence_fetcher = await get_confluence_fetcher(ctx)
-    try:
-        result = confluence_fetcher.delete_page(page_id=page_id)
-        if result:
-            response = {
-                "success": True,
-                "message": f"Page {page_id} deleted successfully",
-            }
-        else:
-            response = {
-                "success": False,
-                "message": f"Unable to delete page {page_id}. API request completed but deletion unsuccessful.",
-            }
-    except Exception as e:
-        logger.error(f"Error deleting Confluence page {page_id}: {str(e)}")
-        response = {
-            "success": False,
-            "message": f"Error deleting page {page_id}",
-            "error": str(e),
-        }
-
-    return json.dumps(response, indent=2, ensure_ascii=False)
-
-
-@confluence_mcp.tool(
-    tags={"confluence", "write", "toolset:confluence_pages"},
     annotations={"title": "Move Page", "destructiveHint": True},
 )
 @check_write_access
@@ -2463,60 +2418,6 @@ async def download_content_attachments(
         ),
     )
     return contents
-
-
-@confluence_mcp.tool(
-    tags={"confluence", "write", "attachments", "toolset:confluence_attachments"},
-    annotations={"title": "Delete Attachment", "destructiveHint": True},
-)
-@check_write_access
-async def delete_attachment(
-    ctx: Context,
-    attachment_id: Annotated[
-        str,
-        Field(
-            description=(
-                "The ID of the attachment to delete. Attachment IDs can be found using the "
-                "get_attachments tool. Example: 'att123456789'. "
-                "**Warning**: This permanently deletes the attachment and all its versions."
-            )
-        ),
-    ],
-) -> str:
-    """Permanently delete an attachment from Confluence.
-
-    **Warning**: This action cannot be undone! The attachment and ALL its versions will be
-    permanently deleted.
-
-    Use this tool to:
-    - Remove outdated or incorrect attachments
-    - Clean up duplicate files
-    - Delete sensitive information that was accidentally uploaded
-
-    Best practices:
-    - Verify the attachment ID before deletion using get_attachments
-    - Consider downloading the attachment first as a backup
-    - Check with content owners before deleting shared attachments
-
-    Args:
-        ctx: The FastMCP context.
-        attachment_id: The ID of the attachment to delete.
-
-    Returns:
-        JSON string confirming deletion with attachment ID.
-    """
-    confluence_fetcher = await get_confluence_fetcher(ctx)
-
-    confluence_fetcher.delete_attachment(attachment_id=attachment_id)
-
-    return json.dumps(
-        {
-            "message": "Attachment deleted successfully",
-            "attachment_id": attachment_id,
-        },
-        indent=2,
-        ensure_ascii=False,
-    )
 
 
 @confluence_mcp.tool(

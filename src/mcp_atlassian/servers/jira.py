@@ -2195,40 +2195,6 @@ async def assign_issue(
 
 @jira_mcp.tool(
     tags={"jira", "write", "toolset:jira_issues"},
-    annotations={"title": "Delete Issue", "destructiveHint": True},
-)
-@check_write_access
-async def delete_issue(
-    ctx: Context,
-    issue_key: Annotated[
-        str,
-        Field(
-            description="Jira issue key (e.g., 'PROJ-123', 'ACV2-642')",
-            pattern=ISSUE_KEY_PATTERN,
-        ),
-    ],
-) -> str:
-    """Delete an existing Jira issue.
-
-    Args:
-        ctx: The FastMCP context.
-        issue_key: Jira issue key.
-
-    Returns:
-        JSON string indicating success.
-
-    Raises:
-        ValueError: If in read-only mode or Jira client unavailable.
-    """
-    jira = await get_jira_fetcher(ctx)
-    deleted = jira.delete_issue(issue_key)
-    result = {"message": f"Issue {issue_key} has been deleted successfully."}
-    # The underlying method raises on failure, so if we reach here, it's success.
-    return json.dumps(result, indent=2, ensure_ascii=False)
-
-
-@jira_mcp.tool(
-    tags={"jira", "write", "toolset:jira_issues"},
     annotations={"title": "Move Issue to Project", "destructiveHint": True},
 )
 @check_write_access
