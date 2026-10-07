@@ -58,9 +58,13 @@ Gardez ces deux jetons de côté temporairement, vous en aurez besoin à l'étap
 
 1. Ouvrez l'onglet **Copilot Chat** dans VS Code et passez en mode **Agent** (menu déroulant en haut du chat).
 2. Cliquez sur l'icône outils (🔧) et vérifiez que `confluence-dc` et `jira-dc` apparaissent dans la liste.
-3. La première fois que vous posez une question touchant Confluence ou Jira, VS Code vous demandera de coller le jeton correspondant (celui de l'étape 3). Collez-le et validez.
+3. La première fois que vous posez une question touchant Confluence ou Jira, VS Code vous demandera successivement :
+   - de coller le jeton correspondant (celui de l'étape 3) ;
+   - les **clés des espaces Confluence** (puis des **projets Jira**) que l'assistant a le droit d'utiliser, séparées par des virgules (ex: `DEV,TEAM`). **Vous pouvez laisser ce champ vide** pour ne poser aucune restriction, mais le renseigner est fortement recommandé : c'est ce qui empêche l'assistant de créer ou modifier quoi que ce soit en dehors des espaces/projets que vous avez listés, même en cas d'erreur de sa part (voir section 3 ci-dessous).
 
 C'est prêt ! Passez à la section suivante pour l'utiliser.
+
+> Pour changer cette liste plus tard, rouvrez la palette de commandes VS Code (**Cmd/Ctrl+Shift+P**) → *MCP: Reset Cached Inputs*, puis reposez une question à Copilot : il vous redemandera les valeurs.
 
 ---
 
@@ -116,22 +120,33 @@ présentation client", assigné à moi, avec une échéance à vendredi.
 - *"Cherche dans Confluence toutes les pages qui parlent de 'processus de recrutement'"*
 - *"Résume-moi le contenu de la page Confluence 'Roadmap Q2'"*
 
-> Astuce : Copilot vous montrera souvent ce qu'il va faire avant de l'exécuter réellement (surtout pour créer/modifier/supprimer). Relisez et confirmez.
+> Astuce : Copilot vous montrera souvent ce qu'il va faire avant de l'exécuter réellement (surtout pour créer/modifier). Relisez et confirmez — c'est le seul moment où vous pouvez vérifier l'espace/le projet visé *avant* la création.
 
 ---
 
-## 3. En cas de problème
+## 3. Se protéger des erreurs d'espace ou de projet
+
+Ce MCP ne permet que de **créer et mettre à jour** du contenu — il n'y a pas de bouton "supprimer" un ticket, une page ou une pièce jointe, ce risque n'existe donc pas.
+
+Le risque qui reste : que Copilot (ou vous) crée une page/un ticket dans le mauvais espace/projet, parmi tous ceux auxquels votre jeton a accès. Si vous avez renseigné les champs **"espaces Confluence autorisés"** et **"projets Jira autorisés"** à l'étape 5, c'est déjà réglé : toute tentative de création ou modification en dehors de cette liste est automatiquement rejetée, quoi que demande la conversation.
+
+Si vous avez laissé ces champs vides et voulez les activer maintenant : rouvrez la palette de commandes de VS Code (**Cmd/Ctrl+Shift+P**) → *MCP: Reset Cached Inputs*, puis reposez une question à Copilot — il vous les redemandera.
+
+---
+
+## 4. En cas de problème
 
 | Problème | Solution |
 |---|---|
 | `confluence-dc` ou `jira-dc` n'apparaît pas dans la liste d'outils | Vérifiez le chemin dans `.vscode/mcp.json` (étape 4) et relancez VS Code. |
 | Copilot dit qu'il n'arrive pas à se connecter / erreur 401 | Votre jeton a peut-être expiré ou été mal collé — régénérez-en un (étape 3) et resaisissez-le. |
 | "Je ne trouve pas Jetons d'accès personnels dans mon profil" | Cette option peut être désactivée par votre administrateur Confluence/Jira — contactez votre IT. |
-| Copilot crée la page/le ticket dans le mauvais espace/projet | Précisez toujours la clé exacte de l'espace (ex: `DEV`) ou du projet (ex: `SUPPORT`) dans votre demande. |
+| Copilot crée la page/le ticket dans le mauvais espace/projet | Précisez toujours la clé exacte de l'espace (ex: `DEV`) ou du projet (ex: `SUPPORT`) dans votre demande, et renseignez la liste des espaces/projets autorisés (section 3) pour bloquer toute tentative hors de cette liste. |
+| Message d'erreur "is restricted by configuration" | Normal : l'espace/le projet demandé n'est pas dans votre liste d'espaces/projets autorisés (section 3). Si c'est une erreur, ajoutez-le à la liste via *MCP: Reset Cached Inputs*. |
 
 ---
 
-## 4. Détails techniques (pour l'équipe IT)
+## 5. Détails techniques (pour l'équipe IT)
 
 Copie interne, auditée et corrigée, du serveur MCP [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian) (licence MIT, voir `LICENSE`), figée sur le tag **v0.23.1**, pour connecter GitHub Copilot dans VS Code à notre Confluence et Jira Data Center (authentification par Personal Access Token, sans Docker).
 

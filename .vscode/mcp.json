@@ -10,7 +10,8 @@
       "env": {
         "CONFLUENCE_URL": "https://confluence.tonentreprise.com",
         "CONFLUENCE_PERSONAL_TOKEN": "${input:confluencePat}",
-        "CONFLUENCE_SSL_VERIFY": "true"
+        "CONFLUENCE_SSL_VERIFY": "true",
+        "CONFLUENCE_SPACES_FILTER": "${input:confluenceSpacesFilter}"
       }
     },
     "jira-dc": {
@@ -23,7 +24,8 @@
       "env": {
         "JIRA_URL": "https://jira.tonentreprise.com",
         "JIRA_PERSONAL_TOKEN": "${input:jiraPat}",
-        "JIRA_SSL_VERIFY": "true"
+        "JIRA_SSL_VERIFY": "true",
+        "JIRA_PROJECTS_FILTER": "${input:jiraProjectsFilter}"
       }
     }
   },
@@ -39,6 +41,18 @@
       "type": "promptString",
       "description": "Jira Data Center Personal Access Token",
       "password": true
+    },
+    {
+      "id": "confluenceSpacesFilter",
+      "type": "promptString",
+      "description": "Clés des espaces Confluence autorisés, séparées par des virgules (ex: DEV,TEAM). Laisser vide = tous les espaces accessibles au jeton.",
+      "default": ""
+    },
+    {
+      "id": "jiraProjectsFilter",
+      "type": "promptString",
+      "description": "Clés des projets Jira autorisés, séparées par des virgules (ex: SUPPORT,PROD). Laisser vide = tous les projets accessibles au jeton.",
+      "default": ""
     }
   ]
 }
